@@ -1,0 +1,2811 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการร้านขอนแก่น</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <h1 class="text-2xl font-bold text-indigo-600">🏪 ระบบจัดการร้านขอนแก่น</h1>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="showTab('admin')" id="adminTab" class="px-3 py-2 rounded-lg bg-indigo-600 text-white font-medium text-sm">จัดการแอดมิน</button>
+                    <button onclick="showTab('orders')" id="ordersTab" class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium text-sm">บันทึกออเดอร์</button>
+                    <button onclick="showTab('tracking')" id="trackingTab" class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium text-sm">อัพเดตเลขพัสดุ</button>
+                    <button onclick="showTab('manage')" id="manageTab" class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium text-sm">จัดการออเดอร์</button>
+                    <button onclick="showTab('reports')" id="reportsTab" class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium text-sm">รายงานยอดขาย</button>
+                    <button onclick="showTab('commission')" id="commissionTab" class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium text-sm">สรุปค่าคอมมิชชั่น</button>
+                    <button onclick="showTab('products')" id="productsTab" class="px-3 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium text-sm">จัดการสินค้า</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Admin Management Tab -->
+        <div id="adminSection" class="tab-content active">
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">📋 บันทึกข้อมูลแอดมิน</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">รหัสแอดมิน</label>
+                        <input type="text" id="adminId" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อแอดมิน</label>
+                        <input type="text" id="adminName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="กรอกชื่อแอดมิน">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ค่าคอมมิชั่น (3-6%)</label>
+                        <input type="number" id="adminCommission" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="3.00" step="0.01" min="3" max="6">
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button onclick="generateAdminId()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">สุ่มรหัส</button>
+                    <button onclick="saveAdmin()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">บันทึก</button>
+                    <button onclick="saveToGoogleSheet('admin')" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">บันทึกใน Google Sheet</button>
+                    <button onclick="loadFromGoogleSheet('admin')" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm">เรียกดูข้อมูล Google Sheet</button>
+                    <button onclick="openGoogleSheets()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">📊 ดู Google Sheets</button>
+                </div>
+            </div>
+
+            <!-- Admin List -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">รายการแอดมิน</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-4 py-2 text-left text-sm font-medium">รหัสแอดมิน</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">ชื่อแอดมิน</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">ค่าคอมมิชั่น</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div id="ordersSection" class="tab-content">
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">📝 บันทึกออเดอร์</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ข้อความออเดอร์จากลูกค้า</label>
+                        <textarea id="orderText" rows="12" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="02/08/68
+
+ลูกชิ้นปลากลมถุงแดงไทยภรณ์ 2*170=340
+ข้าวคั่ว 35
+น้ำยาป่าสำเร็ต 2*100 200
+น้ำย่านาง 120
+ขนมจีนโคราช 65
+
+ค่าส่ง 70
+รวม 830
+
+ส่ง 7-11
+ออเดอร์ Niza Treetippay
+Lalisa 0958229809
+7-ELEVEN 華秀門市"></textarea>
+                        <button onclick="parseOrder()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">แปลงข้อมูล</button>
+                    </div>
+                    <div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">เลขที่ออเดอร์</label>
+                                <input type="text" id="orderId" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">วันที่</label>
+                                <input type="date" id="orderDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อลูกค้า</label>
+                                <input type="text" id="customerName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">แอดมินผู้รับออเดอร์</label>
+                                <select id="orderAdmin" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"></select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ช่องทางขนส่ง</label>
+                                <select id="shippingMethod" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                                    <option value="7-11">7-11</option>
+                                    <option value="Family Mart">Family Mart</option>
+                                    <option value="แมวดำ">แมวดำ</option>
+                                    <option value="นัดรับ">นัดรับ</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ค่าส่ง</label>
+                                <input type="number" id="shippingFee" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" step="0.01">
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ที่อยู่ลูกค้า</label>
+                            <textarea id="customerAddress" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm"></textarea>
+                        </div>
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">รายการสั่ง</label>
+                            <div class="border border-gray-300 rounded-lg bg-gray-50">
+                                <div class="p-3 border-b bg-gray-100 flex justify-between items-center">
+                                    <span class="text-sm font-medium">รายการสินค้า</span>
+                                    <button onclick="addNewItem()" class="px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700">+ เพิ่มสินค้า</button>
+                                </div>
+                                <div id="orderItems" class="p-3 min-h-20 text-sm"></div>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ยอดขาย</label>
+                                <input type="number" id="totalAmount" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">สถานะ</label>
+                                <select id="orderStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                                    <option value="เปิดบิล">เปิดบิล</option>
+                                    <option value="ส่งแล้ว">ส่งแล้ว</option>
+                                    <option value="ตีกลับ">ตีกลับ</option>
+                                    <option value="ยกเลิก">ยกเลิก</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-4">
+                    <button onclick="generateOrderId()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">สุ่มเลขออเดอร์</button>
+                    <button onclick="saveOrder()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">บันทึกออเดอร์</button>
+                    <button onclick="saveToGoogleSheet('orders')" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">บันทึกใน Google Sheet</button>
+                    <button onclick="loadFromGoogleSheet('orders')" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm">เรียกดูข้อมูล Google Sheet</button>
+                    <button onclick="openGoogleSheets()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">📊 ดู Google Sheets</button>
+                </div>
+            </div>
+
+            <!-- Sync Status Dashboard -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">📊 สถานะการซิงค์ Google Sheets</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div class="bg-gray-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-gray-600" id="syncNotSent">0</div>
+                        <div class="text-sm text-gray-500">ยังไม่ได้ส่ง</div>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-yellow-600" id="syncSending">0</div>
+                        <div class="text-sm text-yellow-600">กำลังส่ง</div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-green-600" id="syncSuccess">0</div>
+                        <div class="text-sm text-green-600">เสร็จสิ้น</div>
+                    </div>
+                    <div class="bg-red-50 p-4 rounded-lg text-center">
+                        <div class="text-2xl font-bold text-red-600" id="syncError">0</div>
+                        <div class="text-sm text-red-600">ส่งไม่ได้</div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="syncAllOrders()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">🔄 ซิงค์ออเดอร์ทั้งหมด</button>
+                    <button onclick="syncFailedOrders()" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm">🔁 ซิงค์ออเดอร์ที่ล้มเหลว</button>
+                    <button onclick="openGoogleSheets()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">📊 ดู Google Sheets</button>
+                    <button onclick="clearSyncStatus()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm">🗑️ ล้างสถานะ</button>
+                </div>
+            </div>
+
+            <!-- Orders List -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">รายการออเดอร์</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-2 py-2 text-left text-xs font-medium">เลขออเดอร์</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium">วันที่</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium">ลูกค้า</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium">แอดมิน</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium">ยอดขาย</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium">สถานะ</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium">Google Sheet</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tracking Tab -->
+        <div id="trackingSection" class="tab-content">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">📦 อัพเดตเลขพัสดุ</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">เลือกออเดอร์</label>
+                        <select id="trackingOrderSelect" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 mb-4 text-sm"></select>
+                        
+                        <label class="block text-sm font-medium text-gray-700 mb-2">เลขพัสดุ</label>
+                        <input type="text" id="trackingNumber" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 mb-4 text-sm" placeholder="กรอกเลขพัสดุ">
+                        
+                        <label class="block text-sm font-medium text-gray-700 mb-2">อัพโหลดรูปภาพ</label>
+                        <input type="file" id="trackingImage" accept="image/*" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 mb-4 text-sm">
+                        
+                        <div class="flex gap-2">
+                            <button onclick="updateTracking()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">อัพเดตเลขพัสดุ</button>
+                            <button onclick="editTracking()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">แก้ไข</button>
+                            <button onclick="deleteTracking()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">ลบ</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div id="trackingPreview" class="border border-gray-300 rounded-lg p-4 bg-gray-50 text-sm">
+                            <p class="text-gray-500">เลือกออเดอร์เพื่อดูรายละเอียด</p>
+                        </div>
+                        <div id="trackingImagePreview" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manage Orders Tab -->
+        <div id="manageSection" class="tab-content">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">⚙️ จัดการออเดอร์</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-2 py-2 text-left text-xs font-medium">เลขออเดอร์</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium">ลูกค้า</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium">ยอดขาย</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium">เลขพัสดุ</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium">สถานะ</th>
+                                <th class="px-2 py-2 text-left text-xs font-medium">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="manageOrdersList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sales Reports Tab -->
+        <div id="reportsSection" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+                <!-- Summary Cards -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">ยอดขายวันนี้</p>
+                            <p class="text-xl font-bold text-gray-900" id="todaySales">0 ฿</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-green-100 text-green-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">ยอดขายเดือนนี้</p>
+                            <p class="text-xl font-bold text-gray-900" id="monthSales">0 ฿</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">จำนวนออเดอร์</p>
+                            <p class="text-xl font-bold text-gray-900" id="totalOrders">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center">
+                        <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                            </svg>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">จำนวนแอดมิน</p>
+                            <p class="text-xl font-bold text-gray-900" id="totalAdmins">0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">📊 กราฟยอดขายรายวัน (7 วันล่าสุด)</h3>
+                    <canvas id="dailySalesChart" width="400" height="200"></canvas>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">🥧 สัดส่วนช่องทางขนส่ง</h3>
+                    <canvas id="shippingChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Top Products -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">🏆 สินค้าขายดี</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-4 py-2 text-left text-sm font-medium">อันดับ</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">สินค้า</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">จำนวนขาย</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">ยอดขาย</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topProductsList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Commission Tab -->
+        <div id="commissionSection" class="tab-content">
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">💰 สรุปค่าคอมมิชชั่น</h2>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ค้นหาแอดมิน</label>
+                        <select id="commissionAdminFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                            <option value="">ทุกคน</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">เลือกช่วงวันที่</label>
+                        <input type="date" id="commissionStartDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">ถึงวันที่</label>
+                        <input type="date" id="commissionEndDate" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="calculateCommission()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">คำนวณค่าคอม</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">รายงานค่าคอมมิชชั่นแต่ละแอดมิน</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-4 py-2 text-left text-sm font-medium">แอดมิน</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">จำนวนออเดอร์</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">ยอดขายรวม</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">ค่าส่งรวม</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">ยอดขายสุทธิ</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">% คอม</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">ค่าคอมมิชชั่น</th>
+                                <th class="px-4 py-2 text-left text-sm font-medium">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="commissionList"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Order Details Modal -->
+            <div id="orderDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                        <div class="p-6 border-b border-gray-200">
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-xl font-bold text-gray-800">รายละเอียดออเดอร์ของ <span id="modalAdminName"></span></h3>
+                                <button onclick="closeOrderDetailsModal()" class="text-gray-400 hover:text-gray-600">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">ช่วงวันที่: <span id="modalDateRange"></span></p>
+                        </div>
+                        <div class="p-6">
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <p class="text-sm text-blue-600 font-medium">จำนวนออเดอร์</p>
+                                    <p class="text-2xl font-bold text-blue-800" id="modalOrderCount">0</p>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-lg">
+                                    <p class="text-sm text-green-600 font-medium">ยอดขายรวม</p>
+                                    <p class="text-2xl font-bold text-green-800" id="modalTotalSales">0฿</p>
+                                </div>
+                                <div class="bg-yellow-50 p-4 rounded-lg">
+                                    <p class="text-sm text-yellow-600 font-medium">ยอดขายสุทธิ</p>
+                                    <p class="text-2xl font-bold text-yellow-800" id="modalNetSales">0฿</p>
+                                </div>
+                                <div class="bg-purple-50 p-4 rounded-lg">
+                                    <p class="text-sm text-purple-600 font-medium">ค่าคอมมิชชั่น</p>
+                                    <p class="text-2xl font-bold text-purple-800" id="modalCommission">0฿</p>
+                                </div>
+                            </div>
+                            
+                            <h4 class="text-lg font-bold text-gray-800 mb-4">รายการออเดอร์ทั้งหมด</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full table-auto">
+                                    <thead>
+                                        <tr class="bg-gray-50">
+                                            <th class="px-3 py-2 text-left text-xs font-medium">เลขออเดอร์</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium">วันที่</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium">ลูกค้า</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium">ช่องทางส่ง</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium">ยอดขาย</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium">ค่าส่ง</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium">สุทธิ</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium">สถานะ</th>
+                                            <th class="px-3 py-2 text-left text-xs font-medium">รายการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="modalOrdersList"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products Management Tab -->
+        <div id="productsSection" class="tab-content">
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">📦 จัดการสินค้า</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">รหัสสินค้า</label>
+                                <input type="text" id="productId" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อสินค้า</label>
+                                <input type="text" id="productName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="กรอกชื่อสินค้า">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">น้ำหนักสินค้า (กรัม)</label>
+                                <input type="number" id="productWeight" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="0" step="0.01">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ราคาต้นทุน (฿)</label>
+                                <input type="number" id="productCost" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="0" step="0.01">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ราคาขายปลีก (฿)</label>
+                                <input type="number" id="productRetailPrice" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="0" step="0.01">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">ราคาขายส่ง (฿)</label>
+                                <input type="number" id="productWholesalePrice" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="0" step="0.01">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">จำนวนคงเหลือ</label>
+                                <input type="number" id="productStock" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="0" step="1">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">เลขบาร์โค้ด</label>
+                                <input type="text" id="productBarcode" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 text-sm" placeholder="กรอกเลขบาร์โค้ด">
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="generateProductId()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm">สุ่มรหัสสินค้า</button>
+                            <button onclick="saveProduct()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm">บันทึกสินค้า</button>
+                            <button onclick="clearProductForm()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm">ล้างฟอร์ม</button>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                            <h3 class="text-lg font-bold text-gray-800 mb-3">🔄 ดึงข้อมูลจากออเดอร์</h3>
+                            <p class="text-sm text-gray-600 mb-3">ดึงรายการสินค้าจากออเดอร์ที่บันทึกไว้มาเพิ่มในระบบสินค้า</p>
+                            <button onclick="importProductsFromOrders()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">
+                                📥 ดึงข้อมูลจากออเดอร์
+                            </button>
+                        </div>
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <h3 class="text-lg font-bold text-gray-800 mb-3">📊 สรุปสินค้า</h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-blue-600" id="totalProducts">0</p>
+                                    <p class="text-sm text-gray-600">รายการสินค้า</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-red-600" id="lowStockProducts">0</p>
+                                    <p class="text-sm text-gray-600">สินค้าใกล้หมด</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-green-600" id="totalStockValue">0฿</p>
+                                    <p class="text-sm text-gray-600">มูลค่าสต็อก</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-purple-600" id="totalProducts2">0</p>
+                                    <p class="text-sm text-gray-600">สินค้าทั้งหมด</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products List -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">รายการสินค้าทั้งหมด</h3>
+                    <div class="flex gap-2">
+                        <input type="text" id="productSearch" placeholder="ค้นหาสินค้า..." class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onkeyup="searchProducts()">
+                        <select id="stockFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="filterProducts()">
+                            <option value="">ทั้งหมด</option>
+                            <option value="instock">มีสต็อก</option>
+                            <option value="lowstock">สต็อกต่ำ (≤10)</option>
+                            <option value="outofstock">หมดสต็อก</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full table-auto">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-3 py-2 text-left text-xs font-medium">รหัสสินค้า</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium">ชื่อสินค้า</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium">น้ำหนัก</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium">ต้นทุน</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium">ขายปลีก</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium">ขายส่ง</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium">คงเหลือ</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium">บาร์โค้ด</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsList"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let admins = JSON.parse(localStorage.getItem('admins')) || [];
+        let orders = JSON.parse(localStorage.getItem('orders')) || [];
+        let products = JSON.parse(localStorage.getItem('products')) || [];
+        let currentEditingAdmin = null;
+        let currentEditingOrder = null;
+        let currentEditingTracking = null;
+        let currentEditingProduct = null;
+        let orderItemsList = [];
+        let syncStatus = {}; // Track sync status for each order
+
+        // Google Apps Script URL
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby_1tVIq5TZj6MBCo27yky35dexMk8gadnGCqeDVetx4QTk6xDWag91e5JzA9F_qeJl-Q/exec';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            generateAdminId();
+            generateOrderId();
+            generateProductId();
+            document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
+            
+            // Set commission date range to current month
+            const now = new Date();
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            document.getElementById('commissionStartDate').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('commissionEndDate').value = lastDay.toISOString().split('T')[0];
+            
+            // Initialize with sample data if empty
+            initializeSampleData();
+            
+            // Initialize sync status
+            syncStatus = JSON.parse(localStorage.getItem('syncStatus')) || {};
+            
+            // Add event listener for shipping fee changes
+            document.getElementById('shippingFee').addEventListener('input', updateOrderTotal);
+            
+            loadAdmins();
+            loadOrders();
+            loadProducts();
+            updateAdminDropdowns();
+            updateTrackingDropdown();
+            updateManageOrders();
+            updateReports();
+            updateProductSummary();
+            calculateCommission();
+            updateSyncStatusSummary();
+        });
+
+        // Initialize sample data for demonstration
+        function initializeSampleData() {
+            // Add sample admins if none exist
+            if (admins.length === 0) {
+                admins = [
+                    { id: 'ADM001', name: 'แอดมิน A', commission: 5.0 },
+                    { id: 'ADM002', name: 'แอดมิน B', commission: 4.5 },
+                    { id: 'ADM003', name: 'แอดมิน C', commission: 6.0 }
+                ];
+                localStorage.setItem('admins', JSON.stringify(admins));
+            }
+
+            // Add sample orders if none exist
+            if (orders.length === 0) {
+                const today = new Date().toISOString().split('T')[0];
+                const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+                const twoDaysAgo = new Date(Date.now() - 172800000).toISOString().split('T')[0];
+                
+                orders = [
+                    {
+                        id: 'ORD001',
+                        date: today,
+                        customerName: 'นางสาวสมใจ ใจดี',
+                        admin: 'แอดมิน A',
+                        shippingMethod: '7-11',
+                        shippingFee: 50,
+                        customerAddress: '123 ถนนมิตรภาพ อำเภอเมือง จังหวัดขอนแก่น 40000',
+                        totalAmount: 750,
+                        status: 'เปิดบิล',
+                        trackingNumber: '',
+                        trackingImage: '',
+                        items: '<div class="flex justify-between py-1 border-b"><span>ข้าวคั่ว</span><span>1 × 35฿</span></div><div class="flex justify-between py-1 border-b"><span>น้ำยาป่าสำเร็ต</span><span>2*100 × 200฿</span></div><div class="flex justify-between py-1 border-b"><span>น้ำย่านาง</span><span>1 × 120฿</span></div><div class="flex justify-between py-1 border-b"><span>ขนมจีนโคราช</span><span>1 × 65฿</span></div><div class="flex justify-between py-1 border-b"><span>มะละกอ</span><span>1 × 80฿</span></div>'
+                    },
+                    {
+                        id: 'ORD002',
+                        date: yesterday,
+                        customerName: 'นายสมชาย ดีใจ',
+                        admin: 'แอดมิน B',
+                        shippingMethod: 'Family Mart',
+                        shippingFee: 40,
+                        customerAddress: '456 ถนนศรีจันทร์ อำเภอเมือง จังหวัดขอนแก่น 40000',
+                        totalAmount: 520,
+                        status: 'ส่งแล้ว',
+                        trackingNumber: 'TH1234567890',
+                        trackingImage: '',
+                        items: '<div class="flex justify-between py-1 border-b"><span>ข้าวคั่ว</span><span>2 × 70฿</span></div><div class="flex justify-between py-1 border-b"><span>น้ำยาป่าสำเร็ต</span><span>1*100 × 100฿</span></div><div class="flex justify-between py-1 border-b"><span>มะละกอ</span><span>3 × 240฿</span></div>'
+                    },
+                    {
+                        id: 'ORD003',
+                        date: twoDaysAgo,
+                        customerName: 'นางสาวสุดา สวยงาม',
+                        admin: 'แอดมิน C',
+                        shippingMethod: 'แมวดำ',
+                        shippingFee: 60,
+                        customerAddress: '789 ถนนกัลปพฤกษ์ อำเภอเมือง จังหวัดขอนแก่น 40000',
+                        totalAmount: 890,
+                        status: 'เปิดบิล',
+                        trackingNumber: '',
+                        trackingImage: '',
+                        items: '<div class="flex justify-between py-1 border-b"><span>ขนมจีนโคราช</span><span>4 × 260฿</span></div><div class="flex justify-between py-1 border-b"><span>น้ำย่านาง</span><span>2 × 240฿</span></div><div class="flex justify-between py-1 border-b"><span>ข้าวคั่ว</span><span>3 × 105฿</span></div>'
+                    }
+                ];
+                localStorage.setItem('orders', JSON.stringify(orders));
+            }
+        }
+
+        // Tab Management
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('nav button').forEach(btn => {
+                btn.classList.remove('bg-indigo-600', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + 'Section').classList.add('active');
+            
+            // Add active class to selected button
+            document.getElementById(tabName + 'Tab').classList.remove('bg-gray-200', 'text-gray-700');
+            document.getElementById(tabName + 'Tab').classList.add('bg-indigo-600', 'text-white');
+
+            // Update reports when switching to reports tab
+            if (tabName === 'reports') {
+                updateReports();
+            }
+        }
+
+        // Admin Management Functions
+        function generateAdminId() {
+            const id = 'ADM' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            document.getElementById('adminId').value = id;
+        }
+
+        function saveAdmin() {
+            const adminId = document.getElementById('adminId').value;
+            const adminName = document.getElementById('adminName').value;
+            const adminCommission = parseFloat(document.getElementById('adminCommission').value);
+
+            if (!adminName || !adminCommission || adminCommission < 3 || adminCommission > 6) {
+                Swal.fire('ข้อผิดพลาด', 'กรุณากรอกข้อมูลให้ครบถ้วน และค่าคอมมิชชั่นต้องอยู่ระหว่าง 3-6%', 'error');
+                return;
+            }
+
+            const admin = {
+                id: adminId,
+                name: adminName,
+                commission: adminCommission
+            };
+
+            if (currentEditingAdmin !== null) {
+                admins[currentEditingAdmin] = admin;
+                currentEditingAdmin = null;
+            } else {
+                admins.push(admin);
+            }
+
+            localStorage.setItem('admins', JSON.stringify(admins));
+            loadAdmins();
+            updateAdminDropdowns();
+            clearAdminForm();
+            
+            Swal.fire('สำเร็จ', 'บันทึกข้อมูลแอดมินเรียบร้อยแล้ว', 'success');
+        }
+
+        function editAdmin(index) {
+            const admin = admins[index];
+            document.getElementById('adminId').value = admin.id;
+            document.getElementById('adminName').value = admin.name;
+            document.getElementById('adminCommission').value = admin.commission;
+            currentEditingAdmin = index;
+        }
+
+        function deleteAdmin(index) {
+            Swal.fire({
+                title: 'ยืนยันการลบ',
+                text: 'คุณต้องการลบข้อมูลแอดมินนี้หรือไม่?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ลบ',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    admins.splice(index, 1);
+                    localStorage.setItem('admins', JSON.stringify(admins));
+                    loadAdmins();
+                    updateAdminDropdowns();
+                    Swal.fire('ลบแล้ว', 'ลบข้อมูลแอดมินเรียบร้อยแล้ว', 'success');
+                }
+            });
+        }
+
+        function clearAdminForm() {
+            document.getElementById('adminName').value = '';
+            document.getElementById('adminCommission').value = '';
+            generateAdminId();
+        }
+
+        function loadAdmins() {
+            const adminList = document.getElementById('adminList');
+            adminList.innerHTML = '';
+
+            admins.forEach((admin, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 py-2 border-b text-sm">${admin.id}</td>
+                    <td class="px-4 py-2 border-b text-sm">${admin.name}</td>
+                    <td class="px-4 py-2 border-b text-sm">${admin.commission}%</td>
+                    <td class="px-4 py-2 border-b">
+                        <button onclick="editAdmin(${index})" class="px-2 py-1 bg-blue-500 text-white rounded text-xs mr-1">แก้ไข</button>
+                        <button onclick="deleteAdmin(${index})" class="px-2 py-1 bg-red-500 text-white rounded text-xs">ลบ</button>
+                    </td>
+                `;
+                adminList.appendChild(row);
+            });
+        }
+
+        function updateAdminDropdowns() {
+            const orderAdminSelect = document.getElementById('orderAdmin');
+            orderAdminSelect.innerHTML = '<option value="">เลือกแอดมิน</option>';
+            
+            const commissionAdminFilter = document.getElementById('commissionAdminFilter');
+            commissionAdminFilter.innerHTML = '<option value="">ทุกคน</option>';
+            
+            admins.forEach(admin => {
+                const option = document.createElement('option');
+                option.value = admin.name;
+                option.textContent = admin.name;
+                orderAdminSelect.appendChild(option);
+
+                const filterOption = document.createElement('option');
+                filterOption.value = admin.name;
+                filterOption.textContent = admin.name;
+                commissionAdminFilter.appendChild(filterOption);
+            });
+        }
+
+        // Order Management Functions
+        function generateOrderId() {
+            const id = 'ORD' + Date.now().toString().slice(-6);
+            document.getElementById('orderId').value = id;
+        }
+
+        // Order Items Management Functions
+        function displayOrderItems() {
+            const orderItemsDiv = document.getElementById('orderItems');
+            
+            if (orderItemsList.length === 0) {
+                orderItemsDiv.innerHTML = '<p class="text-gray-500 text-center py-4">ยังไม่มีรายการสินค้า</p>';
+                return;
+            }
+            
+            orderItemsDiv.innerHTML = orderItemsList.map(item => 
+                `<div class="flex justify-between items-center py-2 border-b border-gray-200 hover:bg-gray-50 rounded px-2">
+                    <div class="flex-1">
+                        <span class="font-medium">${item.name}</span>
+                        <div class="text-xs text-gray-500">${item.quantity} × ${item.price}฿ = ${calculateItemTotal(item.quantity, item.price)}฿</div>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="editItem(${item.id})" class="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600">แก้ไข</button>
+                        <button onclick="deleteItem(${item.id})" class="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600">ลบ</button>
+                    </div>
+                </div>`
+            ).join('');
+            
+            // Update total amount
+            updateOrderTotal();
+        }
+
+        function calculateItemTotal(quantity, price) {
+            // Handle quantity formats like "2*100" or just "1"
+            let qty = 1;
+            const quantityStr = quantity.toString();
+            if (quantityStr.includes('*')) {
+                const parts = quantityStr.split('*');
+                qty = parseInt(parts[0]) || 1;
+            } else {
+                qty = parseInt(quantityStr) || 1;
+            }
+            return qty * (parseInt(price) || 0);
+        }
+
+        function updateOrderTotal() {
+            const total = orderItemsList.reduce((sum, item) => {
+                return sum + calculateItemTotal(item.quantity, item.price);
+            }, 0);
+            
+            const shippingFee = parseFloat(document.getElementById('shippingFee').value) || 0;
+            document.getElementById('totalAmount').value = total + shippingFee;
+        }
+
+        function addNewItem() {
+            Swal.fire({
+                title: 'เพิ่มสินค้าใหม่',
+                html: `
+                    <div class="text-left">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อสินค้า</label>
+                            <input type="text" id="newItemName" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="กรอกชื่อสินค้า">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">จำนวน</label>
+                            <input type="text" id="newItemQuantity" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="เช่น 1 หรือ 2*100">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ราคา (฿)</label>
+                            <input type="number" id="newItemPrice" class="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="กรอกราคา">
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'เพิ่ม',
+                cancelButtonText: 'ยกเลิก',
+                preConfirm: () => {
+                    const name = document.getElementById('newItemName').value.trim();
+                    const quantity = document.getElementById('newItemQuantity').value.trim();
+                    const price = document.getElementById('newItemPrice').value.trim();
+                    
+                    if (!name || !quantity || !price) {
+                        Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
+                        return false;
+                    }
+                    
+                    return { name, quantity, price: parseInt(price) };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const newItem = {
+                        id: Date.now(),
+                        name: result.value.name,
+                        quantity: result.value.quantity,
+                        price: result.value.price
+                    };
+                    
+                    orderItemsList.push(newItem);
+                    displayOrderItems();
+                    Swal.fire('สำเร็จ', 'เพิ่มสินค้าเรียบร้อยแล้ว', 'success');
+                }
+            });
+        }
+
+        function editItem(itemId) {
+            const item = orderItemsList.find(i => i.id === itemId);
+            if (!item) return;
+            
+            Swal.fire({
+                title: 'แก้ไขสินค้า',
+                html: `
+                    <div class="text-left">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ชื่อสินค้า</label>
+                            <input type="text" id="editItemName" class="w-full px-3 py-2 border border-gray-300 rounded-lg" value="${item.name}">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">จำนวน</label>
+                            <input type="text" id="editItemQuantity" class="w-full px-3 py-2 border border-gray-300 rounded-lg" value="${item.quantity}">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">ราคา (฿)</label>
+                            <input type="number" id="editItemPrice" class="w-full px-3 py-2 border border-gray-300 rounded-lg" value="${item.price}">
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'บันทึก',
+                cancelButtonText: 'ยกเลิก',
+                preConfirm: () => {
+                    const name = document.getElementById('editItemName').value.trim();
+                    const quantity = document.getElementById('editItemQuantity').value.trim();
+                    const price = document.getElementById('editItemPrice').value.trim();
+                    
+                    if (!name || !quantity || !price) {
+                        Swal.showValidationMessage('กรุณากรอกข้อมูลให้ครบถ้วน');
+                        return false;
+                    }
+                    
+                    return { name, quantity, price: parseInt(price) };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const itemIndex = orderItemsList.findIndex(i => i.id === itemId);
+                    if (itemIndex !== -1) {
+                        orderItemsList[itemIndex] = {
+                            ...orderItemsList[itemIndex],
+                            name: result.value.name,
+                            quantity: result.value.quantity,
+                            price: result.value.price
+                        };
+                        displayOrderItems();
+                        Swal.fire('สำเร็จ', 'แก้ไขสินค้าเรียบร้อยแล้ว', 'success');
+                    }
+                }
+            });
+        }
+
+        function deleteItem(itemId) {
+            Swal.fire({
+                title: 'ยืนยันการลบ',
+                text: 'คุณต้องการลบสินค้านี้หรือไม่?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ลบ',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    orderItemsList = orderItemsList.filter(item => item.id !== itemId);
+                    displayOrderItems();
+                    Swal.fire('ลบแล้ว', 'ลบสินค้าเรียบร้อยแล้ว', 'success');
+                }
+            });
+        }
+
+        function parseOrder() {
+            const orderText = document.getElementById('orderText').value;
+            if (!orderText) return;
+
+            const lines = orderText.split('\n').filter(line => line.trim());
+            let items = [];
+            let customerName = '';
+            let customerAddress = '';
+            let shippingFee = 0;
+            let total = 0;
+            let date = '';
+            let shippingMethod = '7-11';
+            let foundTotal = false; // Flag to stop parsing items after total is found
+
+            lines.forEach(line => {
+                line = line.trim();
+                
+                // Parse date (DD/MM/YY format)
+                if (line.match(/^\d{2}\/\d{2}\/\d{2,4}$/)) {
+                    const [day, month, year] = line.split('/');
+                    const fullYear = year.length === 2 ? '20' + year : year;
+                    date = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                    return;
+                }
+                
+                // Parse customer name (usually after "ออเดอร์")
+                if (line.includes('ออเดอร์') && !line.includes('รวม')) {
+                    customerName = line.replace('ออเดอร์', '').trim();
+                    customerAddress += line + '\n';
+                    return;
+                }
+                
+                // Parse shipping method - check for specific keywords
+                if (line.includes('แฟมิลี่') || line.includes('Family')) {
+                    shippingMethod = 'Family Mart';
+                    customerAddress += line + '\n';
+                    return;
+                } else if (line.includes('7-11') || line.includes('7-ELEVEN') || line.includes('เซเว่น')) {
+                    shippingMethod = '7-11';
+                    customerAddress += line + '\n';
+                    return;
+                } else if (line.includes('แมวดำ')) {
+                    shippingMethod = 'แมวดำ';
+                    customerAddress += line + '\n';
+                    return;
+                } else if (line.includes('นัดรับ')) {
+                    shippingMethod = 'นัดรับ';
+                    customerAddress += line + '\n';
+                    return;
+                }
+                
+                // Parse shipping fee - "ค่าส่ง 75"
+                if (line.includes('ค่าส่ง')) {
+                    const feeMatch = line.match(/ค่าส่ง\s+(\d+)/);
+                    if (feeMatch) {
+                        shippingFee = parseInt(feeMatch[1]);
+                    }
+                    return;
+                }
+                
+                // Parse total - "รวม", "ยอดรวม", "ยอดรวมปลายทาง"
+                if (line.includes('รวม') || line.includes('ยอดรวม')) {
+                    const totalMatch = line.match(/(\d+)/);
+                    if (totalMatch) {
+                        total = parseInt(totalMatch[1]);
+                        foundTotal = true; // Stop parsing items after this
+                    }
+                    return;
+                }
+                
+                // Skip parsing items after total is found
+                if (foundTotal) {
+                    // Add remaining lines to customer address (like phone, store details)
+                    if (line.match(/\d{10}/) || line.includes('ELEVEN') || line.includes('門市') || line.includes('ส่ง')) {
+                        customerAddress += line + '\n';
+                    }
+                    return;
+                }
+                
+                // Parse phone number and store address
+                if (line.match(/\d{10}/) || line.includes('ELEVEN') || line.includes('門市')) {
+                    customerAddress += line + '\n';
+                    return;
+                }
+                
+                // Skip lines that are clearly not products
+                if (line.includes('ส่ง') && !line.match(/^.+\s+\d+/)) {
+                    customerAddress += line + '\n';
+                    return;
+                }
+                
+                // Parse items with prices - Support multiple formats
+                // Format 1: "ลูกชิ้นปลากลมถุงแดงไทยภรณ์ 2*170=340" (quantity*price=total)
+                // Format 2: "ลูกชิ้นปลากลมถุงแดงไทยภรณ์ 2*170 340" (quantity*price total)
+                // Format 3: "ลูกชิ้นปลากลมถุงแดงไทยภรณ์ 340" (single price, quantity=1)
+                
+                // First try format with quantity*price=total or quantity*price total
+                let itemMatch = line.match(/^(.+?)\s+(\d+\*\d+)\s*=?\s*(\d+)$/);
+                if (itemMatch) {
+                    const [, name, quantity, totalPrice] = itemMatch;
+                    const productName = name.trim();
+                    
+                    // Skip if it's a shipping method, fee, or total keyword
+                    if (productName.includes('ค่าส่ง') || 
+                        productName.includes('รวม') || 
+                        productName.includes('แฟมิลี่') || 
+                        productName.includes('7-11') || 
+                        productName.includes('แมวดำ') ||
+                        productName.includes('Family')) {
+                        return;
+                    }
+                    
+                    // Extract unit price from quantity format (e.g., "2*170" -> unit price = 170)
+                    const parts = quantity.split('*');
+                    const unitPrice = parseInt(parts[1]) || 0;
+                    
+                    items.push({
+                        name: productName,
+                        quantity: quantity,
+                        price: unitPrice
+                    });
+                } else {
+                    // Try simple format: "ลูกชิ้นปลากลมถุงแดงไทยภรณ์ 340" (quantity=1, price=340)
+                    itemMatch = line.match(/^(.+?)\s+(\d+)$/);
+                    if (itemMatch) {
+                        const [, name, price] = itemMatch;
+                        const productName = name.trim();
+                        
+                        // Skip if it's a shipping method, fee, or total keyword
+                        if (productName.includes('ค่าส่ง') || 
+                            productName.includes('รวม') || 
+                            productName.includes('แฟมิลี่') || 
+                            productName.includes('7-11') || 
+                            productName.includes('แมวดำ') ||
+                            productName.includes('Family')) {
+                            return;
+                        }
+                        
+                        items.push({
+                            name: productName,
+                            quantity: "1",
+                            price: parseInt(price)
+                        });
+                    }
+                }
+            });
+
+            // Update form fields
+            if (date) {
+                document.getElementById('orderDate').value = date;
+            }
+            
+            document.getElementById('customerName').value = customerName;
+            document.getElementById('customerAddress').value = customerAddress.trim();
+            document.getElementById('shippingFee').value = shippingFee;
+            document.getElementById('totalAmount').value = total;
+            document.getElementById('shippingMethod').value = shippingMethod;
+
+            // Store items in global array and display
+            orderItemsList = items.map((item, index) => ({
+                id: index,
+                name: item.name,
+                quantity: item.quantity,
+                price: item.price
+            }));
+            
+            displayOrderItems();
+        }
+
+        function saveOrder() {
+            const orderId = document.getElementById('orderId').value;
+            const orderDate = document.getElementById('orderDate').value;
+            const customerName = document.getElementById('customerName').value;
+            const orderAdmin = document.getElementById('orderAdmin').value;
+            const shippingMethod = document.getElementById('shippingMethod').value;
+            const shippingFee = document.getElementById('shippingFee').value;
+            const customerAddress = document.getElementById('customerAddress').value;
+            const totalAmount = document.getElementById('totalAmount').value;
+            const orderStatus = document.getElementById('orderStatus').value;
+            // Convert orderItemsList to HTML format for storage
+            const orderItems = orderItemsList.map(item => 
+                `<div class="flex justify-between py-1 border-b">
+                    <span>${item.name}</span>
+                    <span>${item.quantity} × ${item.price}฿</span>
+                </div>`
+            ).join('');
+
+            if (!customerName || !orderAdmin || !totalAmount) {
+                Swal.fire('ข้อผิดพลาด', 'กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                return;
+            }
+
+            const order = {
+                id: orderId,
+                date: orderDate,
+                customerName,
+                admin: orderAdmin,
+                shippingMethod,
+                shippingFee: parseFloat(shippingFee) || 0,
+                customerAddress,
+                totalAmount: parseFloat(totalAmount),
+                status: orderStatus,
+                items: orderItems,
+                trackingNumber: '',
+                trackingImage: ''
+            };
+
+            if (currentEditingOrder !== null) {
+                orders[currentEditingOrder] = order;
+                currentEditingOrder = null;
+            } else {
+                orders.push(order);
+            }
+
+            localStorage.setItem('orders', JSON.stringify(orders));
+            loadOrders();
+            updateTrackingDropdown();
+            updateManageOrders();
+            clearOrderForm();
+            
+            Swal.fire('สำเร็จ', 'บันทึกออเดอร์เรียบร้อยแล้ว', 'success');
+        }
+
+        function editOrder(index) {
+            const order = orders[index];
+            document.getElementById('orderId').value = order.id;
+            document.getElementById('orderDate').value = order.date;
+            document.getElementById('customerName').value = order.customerName;
+            document.getElementById('orderAdmin').value = order.admin;
+            document.getElementById('shippingMethod').value = order.shippingMethod;
+            document.getElementById('shippingFee').value = order.shippingFee;
+            document.getElementById('customerAddress').value = order.customerAddress;
+            document.getElementById('totalAmount').value = order.totalAmount;
+            document.getElementById('orderStatus').value = order.status;
+            // Parse items from HTML back to orderItemsList
+            parseItemsFromHTML(order.items);
+            displayOrderItems();
+            currentEditingOrder = index;
+            showTab('orders');
+        }
+
+        function deleteOrder(index) {
+            Swal.fire({
+                title: 'ยืนยันการลบ',
+                text: 'คุณต้องการลบออเดอร์นี้หรือไม่?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ลบ',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    orders.splice(index, 1);
+                    localStorage.setItem('orders', JSON.stringify(orders));
+                    loadOrders();
+                    updateTrackingDropdown();
+                    updateManageOrders();
+                    updateReports();
+                    Swal.fire('ลบแล้ว', 'ลบออเดอร์เรียบร้อยแล้ว', 'success');
+                }
+            });
+        }
+
+        function parseItemsFromHTML(itemsHTML) {
+            orderItemsList = [];
+            if (!itemsHTML) return;
+            
+            // Create temporary div to parse HTML content
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = itemsHTML;
+            const itemDivs = tempDiv.querySelectorAll('div');
+            
+            itemDivs.forEach((div, index) => {
+                const text = div.textContent.trim();
+                if (!text) return;
+                
+                // Parse format: "ข้าวคั่ว 1 × 35฿"
+                const match = text.match(/^(.+?)\s+(.+?)\s*×\s*(\d+)฿$/);
+                if (match) {
+                    const [, name, quantity, price] = match;
+                    orderItemsList.push({
+                        id: Date.now() + index,
+                        name: name.trim(),
+                        quantity: quantity.trim(),
+                        price: parseInt(price)
+                    });
+                }
+            });
+        }
+
+        function clearOrderForm() {
+            document.getElementById('orderText').value = '';
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerAddress').value = '';
+            document.getElementById('shippingFee').value = '';
+            document.getElementById('totalAmount').value = '';
+            document.getElementById('orderAdmin').value = '';
+            orderItemsList = [];
+            displayOrderItems();
+            generateOrderId();
+        }
+
+        function loadOrders() {
+            const ordersList = document.getElementById('ordersList');
+            ordersList.innerHTML = '';
+
+            orders.forEach((order, index) => {
+                const row = document.createElement('tr');
+                const syncStatusInfo = getSyncStatusDisplay(order.id);
+                
+                row.innerHTML = `
+                    <td class="px-2 py-2 border-b text-xs">${order.id}</td>
+                    <td class="px-2 py-2 border-b text-xs">${order.date}</td>
+                    <td class="px-2 py-2 border-b text-xs">${order.customerName}</td>
+                    <td class="px-2 py-2 border-b text-xs">${order.admin}</td>
+                    <td class="px-2 py-2 border-b text-xs">${order.totalAmount.toLocaleString()}฿</td>
+                    <td class="px-2 py-2 border-b">
+                        <span class="px-2 py-1 rounded text-xs ${getStatusColor(order.status)}">${order.status}</span>
+                    </td>
+                    <td class="px-2 py-2 border-b text-xs">
+                        ${syncStatusInfo.html}
+                    </td>
+                    <td class="px-2 py-2 border-b">
+                        <button onclick="editOrder(${index})" class="px-2 py-1 bg-blue-500 text-white rounded text-xs mr-1">แก้ไข</button>
+                        <button onclick="deleteOrder(${index})" class="px-2 py-1 bg-red-500 text-white rounded text-xs">ลบ</button>
+                    </td>
+                `;
+                ordersList.appendChild(row);
+            });
+        }
+
+        function getStatusColor(status) {
+            switch(status) {
+                case 'เปิดบิล': return 'bg-blue-100 text-blue-800';
+                case 'ส่งแล้ว': return 'bg-green-100 text-green-800';
+                case 'ตีกลับ': return 'bg-yellow-100 text-yellow-800';
+                case 'ยกเลิก': return 'bg-red-100 text-red-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+
+        function getSyncStatusDisplay(orderId) {
+            const status = syncStatus[orderId];
+            
+            if (!status) {
+                return {
+                    html: `<span class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">ยังไม่ได้ส่ง</span>`,
+                    canResync: false
+                };
+            }
+            
+            switch(status.status) {
+                case 'syncing':
+                    return {
+                        html: `<span class="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800">กำลังส่ง...</span>`,
+                        canResync: false
+                    };
+                case 'success':
+                    return {
+                        html: `<span class="px-2 py-1 rounded text-xs bg-green-100 text-green-800">เสร็จสิ้น</span>`,
+                        canResync: false
+                    };
+                case 'error':
+                    return {
+                        html: `
+                            <div class="flex flex-col gap-1">
+                                <span class="px-2 py-1 rounded text-xs bg-red-100 text-red-800">ส่งไม่ได้</span>
+                                <button onclick="resyncOrder('${orderId}')" class="px-2 py-1 bg-orange-500 text-white rounded text-xs hover:bg-orange-600">Re save</button>
+                            </div>
+                        `,
+                        canResync: true
+                    };
+                default:
+                    return {
+                        html: `<span class="px-2 py-1 rounded text-xs bg-gray-100 text-gray-600">ยังไม่ได้ส่ง</span>`,
+                        canResync: false
+                    };
+            }
+        }
+
+        function updateSyncStatus(orderId, status, message = '') {
+            syncStatus[orderId] = {
+                status: status,
+                message: message,
+                timestamp: new Date().toISOString()
+            };
+            localStorage.setItem('syncStatus', JSON.stringify(syncStatus));
+            loadOrders(); // Refresh the orders list to show updated status
+            updateSyncStatusSummary(); // Update the summary counters
+        }
+
+        function updateSyncStatusSummary() {
+            let notSent = 0, sending = 0, success = 0, error = 0;
+            
+            orders.forEach(order => {
+                const status = syncStatus[order.id];
+                if (!status) {
+                    notSent++;
+                } else {
+                    switch(status.status) {
+                        case 'syncing': sending++; break;
+                        case 'success': success++; break;
+                        case 'error': error++; break;
+                        default: notSent++; break;
+                    }
+                }
+            });
+            
+            document.getElementById('syncNotSent').textContent = notSent;
+            document.getElementById('syncSending').textContent = sending;
+            document.getElementById('syncSuccess').textContent = success;
+            document.getElementById('syncError').textContent = error;
+        }
+
+        async function syncAllOrders() {
+            if (orders.length === 0) {
+                Swal.fire('ไม่มีข้อมูล', 'ไม่พบออเดอร์ในระบบ', 'info');
+                return;
+            }
+            
+            await saveOrdersToGoogleSheet();
+        }
+
+        async function syncFailedOrders() {
+            const failedOrders = orders.filter(order => {
+                const status = syncStatus[order.id];
+                return status && status.status === 'error';
+            });
+            
+            if (failedOrders.length === 0) {
+                Swal.fire('ไม่มีข้อมูล', 'ไม่พบออเดอร์ที่ส่งไม่ได้', 'info');
+                return;
+            }
+            
+            Swal.fire({
+                title: `กำลังซิงค์ออเดอร์ที่ล้มเหลว...`,
+                html: `
+                    <div class="text-center">
+                        <p class="mb-4">กำลังส่งข้อมูล ${failedOrders.length} ออเดอร์</p>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="retryProgressBar" class="bg-orange-600 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p id="retryProgressText" class="mt-2 text-sm text-gray-600">0 / ${failedOrders.length}</p>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                showConfirmButton: false
+            });
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (let i = 0; i < failedOrders.length; i++) {
+                const order = failedOrders[i];
+                
+                try {
+                    // Update progress
+                    const progress = ((i + 1) / failedOrders.length) * 100;
+                    document.getElementById('retryProgressBar').style.width = progress + '%';
+                    document.getElementById('retryProgressText').textContent = `${i + 1} / ${failedOrders.length}`;
+                    
+                    updateSyncStatus(order.id, 'syncing');
+                    await saveOrderToGoogleSheet(order);
+                    updateSyncStatus(order.id, 'success', 'บันทึกสำเร็จ');
+                    successCount++;
+                    
+                } catch (error) {
+                    updateSyncStatus(order.id, 'error', error.message);
+                    errorCount++;
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            Swal.fire({
+                title: 'ซิงค์เสร็จสิ้น',
+                html: `
+                    <div class="text-left">
+                        <p class="text-green-600 mb-2">✅ สำเร็จ: ${successCount} ออเดอร์</p>
+                        <p class="text-red-600 mb-4">❌ ยังไม่สำเร็จ: ${errorCount} ออเดอร์</p>
+                    </div>
+                `,
+                icon: errorCount === 0 ? 'success' : 'warning',
+                confirmButtonText: 'ปิด'
+            });
+        }
+
+        function clearSyncStatus() {
+            Swal.fire({
+                title: 'ยืนยันการล้างสถานะ',
+                text: 'คุณต้องการล้างสถานะการซิงค์ทั้งหมดหรือไม่?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ล้าง',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    syncStatus = {};
+                    localStorage.setItem('syncStatus', JSON.stringify(syncStatus));
+                    loadOrders();
+                    updateSyncStatusSummary();
+                    Swal.fire('สำเร็จ', 'ล้างสถานะการซิงค์เรียบร้อยแล้ว', 'success');
+                }
+            });
+        }
+
+        async function resyncOrder(orderId) {
+            const order = orders.find(o => o.id === orderId);
+            if (!order) {
+                Swal.fire('ข้อผิดพลาด', 'ไม่พบออเดอร์ที่ต้องการส่งซ้ำ', 'error');
+                return;
+            }
+
+            try {
+                updateSyncStatus(orderId, 'syncing');
+                await saveOrderToGoogleSheet(order);
+                updateSyncStatus(orderId, 'success', 'บันทึกสำเร็จ');
+                Swal.fire('สำเร็จ', 'ส่งข้อมูลออเดอร์ซ้ำเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                updateSyncStatus(orderId, 'error', error.message);
+                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถส่งข้อมูลได้: ' + error.message, 'error');
+            }
+        }
+
+        // Tracking Functions
+        function updateTrackingDropdown() {
+            const select = document.getElementById('trackingOrderSelect');
+            select.innerHTML = '<option value="">เลือกออเดอร์</option>';
+            
+            orders.forEach((order, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${order.id} - ${order.customerName}`;
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', function() {
+                const index = this.value;
+                if (index !== '') {
+                    const order = orders[index];
+                    document.getElementById('trackingPreview').innerHTML = `
+                        <h4 class="font-bold mb-2">รายละเอียดออเดอร์</h4>
+                        <p><strong>เลขออเดอร์:</strong> ${order.id}</p>
+                        <p><strong>ลูกค้า:</strong> ${order.customerName}</p>
+                        <p><strong>ยอดขาย:</strong> ${order.totalAmount.toLocaleString()}฿</p>
+                        <p><strong>สถานะ:</strong> ${order.status}</p>
+                        ${order.trackingNumber ? `<p><strong>เลขพัสดุ:</strong> ${order.trackingNumber}</p>` : ''}
+                    `;
+                    document.getElementById('trackingNumber').value = order.trackingNumber || '';
+                    
+                    // Show tracking image if exists
+                    const imagePreview = document.getElementById('trackingImagePreview');
+                    if (order.trackingImage) {
+                        imagePreview.innerHTML = `
+                            <h4 class="font-bold mb-2">รูปภาพพัสดุ</h4>
+                            <img src="${order.trackingImage}" class="max-w-full h-auto rounded-lg border" alt="Tracking Image">
+                        `;
+                    } else {
+                        imagePreview.innerHTML = '';
+                    }
+                }
+            });
+        }
+
+        function updateTracking() {
+            const orderIndex = document.getElementById('trackingOrderSelect').value;
+            const trackingNumber = document.getElementById('trackingNumber').value;
+            const trackingImage = document.getElementById('trackingImage').files[0];
+
+            if (orderIndex === '' || !trackingNumber) {
+                Swal.fire('ข้อผิดพลาด', 'กรุณาเลือกออเดอร์และกรอกเลขพัสดุ', 'error');
+                return;
+            }
+
+            orders[orderIndex].trackingNumber = trackingNumber;
+            
+            if (trackingImage) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    orders[orderIndex].trackingImage = e.target.result;
+                    localStorage.setItem('orders', JSON.stringify(orders));
+                    updateManageOrders();
+                    updateTrackingDropdown();
+                    Swal.fire('สำเร็จ', 'อัพเดตเลขพัสดุเรียบร้อยแล้ว', 'success');
+                };
+                reader.readAsDataURL(trackingImage);
+            } else {
+                localStorage.setItem('orders', JSON.stringify(orders));
+                updateManageOrders();
+                updateTrackingDropdown();
+                Swal.fire('สำเร็จ', 'อัพเดตเลขพัสดุเรียบร้อยแล้ว', 'success');
+            }
+        }
+
+        function editTracking() {
+            const orderIndex = document.getElementById('trackingOrderSelect').value;
+            if (orderIndex === '') {
+                Swal.fire('ข้อผิดพลาด', 'กรุณาเลือกออเดอร์', 'error');
+                return;
+            }
+            currentEditingTracking = orderIndex;
+            Swal.fire('แจ้งเตือน', 'คุณสามารถแก้ไขเลขพัสดุและอัพโหลดรูปภาพใหม่ได้', 'info');
+        }
+
+        function deleteTracking() {
+            const orderIndex = document.getElementById('trackingOrderSelect').value;
+            if (orderIndex === '') {
+                Swal.fire('ข้อผิดพลาด', 'กรุณาเลือกออเดอร์', 'error');
+                return;
+            }
+
+            Swal.fire({
+                title: 'ยืนยันการลบ',
+                text: 'คุณต้องการลบข้อมูลเลขพัสดุนี้หรือไม่?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ลบ',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    orders[orderIndex].trackingNumber = '';
+                    orders[orderIndex].trackingImage = '';
+                    localStorage.setItem('orders', JSON.stringify(orders));
+                    document.getElementById('trackingNumber').value = '';
+                    document.getElementById('trackingImagePreview').innerHTML = '';
+                    updateManageOrders();
+                    updateTrackingDropdown();
+                    Swal.fire('ลบแล้ว', 'ลบข้อมูลเลขพัสดุเรียบร้อยแล้ว', 'success');
+                }
+            });
+        }
+
+        // Manage Orders Functions
+        function updateManageOrders() {
+            const manageOrdersList = document.getElementById('manageOrdersList');
+            manageOrdersList.innerHTML = '';
+
+            orders.forEach((order, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-2 py-2 border-b text-xs">${order.id}</td>
+                    <td class="px-2 py-2 border-b text-xs">${order.customerName}</td>
+                    <td class="px-2 py-2 border-b text-xs">${order.totalAmount.toLocaleString()}฿</td>
+                    <td class="px-2 py-2 border-b text-xs">${order.trackingNumber || '-'}</td>
+                    <td class="px-2 py-2 border-b">
+                        <select onchange="updateOrderStatus(${index}, this.value)" class="px-2 py-1 border rounded text-xs">
+                            <option value="เปิดบิล" ${order.status === 'เปิดบิล' ? 'selected' : ''}>เปิดบิล</option>
+                            <option value="ส่งแล้ว" ${order.status === 'ส่งแล้ว' ? 'selected' : ''}>ส่งแล้ว</option>
+                            <option value="ตีกลับ" ${order.status === 'ตีกลับ' ? 'selected' : ''}>ตีกลับ</option>
+                            <option value="ยกเลิก" ${order.status === 'ยกเลิก' ? 'selected' : ''}>ยกเลิก</option>
+                        </select>
+                    </td>
+                    <td class="px-2 py-2 border-b">
+                        <button onclick="editOrder(${index})" class="px-2 py-1 bg-blue-500 text-white rounded text-xs mr-1">แก้ไข</button>
+                        <button onclick="deleteOrder(${index})" class="px-2 py-1 bg-red-500 text-white rounded text-xs">ลบ</button>
+                    </td>
+                `;
+                manageOrdersList.appendChild(row);
+            });
+        }
+
+        function updateOrderStatus(index, newStatus) {
+            orders[index].status = newStatus;
+            localStorage.setItem('orders', JSON.stringify(orders));
+            loadOrders();
+            updateReports();
+            Swal.fire('สำเร็จ', 'อัพเดตสถานะเรียบร้อยแล้ว', 'success');
+        }
+
+        // Reports Functions
+        function updateReports() {
+            const today = new Date().toISOString().split('T')[0];
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            
+            // Get valid orders (exclude cancelled orders)
+            const validOrders = orders.filter(order => order.status !== 'ยกเลิก');
+            
+            // Calculate today's sales
+            const todaySales = validOrders
+                .filter(order => order.date === today)
+                .reduce((sum, order) => sum + (parseFloat(order.totalAmount) || 0), 0);
+            
+            // Calculate month's sales
+            const monthSales = validOrders
+                .filter(order => order.date && order.date.startsWith(currentMonth))
+                .reduce((sum, order) => sum + (parseFloat(order.totalAmount) || 0), 0);
+            
+            // Total orders
+            const totalOrders = validOrders.length;
+            
+            // Total admins
+            const totalAdmins = admins.length;
+            
+            document.getElementById('todaySales').textContent = todaySales.toLocaleString() + ' ฿';
+            document.getElementById('monthSales').textContent = monthSales.toLocaleString() + ' ฿';
+            document.getElementById('totalOrders').textContent = totalOrders;
+            document.getElementById('totalAdmins').textContent = totalAdmins;
+            
+            // Update charts and products list
+            updateDailySalesChart();
+            updateShippingChart();
+            updateTopProducts();
+        }
+
+        function updateDailySalesChart() {
+            const ctx = document.getElementById('dailySalesChart').getContext('2d');
+            
+            // Clear previous chart
+            if (window.dailySalesChartInstance) {
+                window.dailySalesChartInstance.destroy();
+            }
+            
+            // Get last 7 days data from saved orders
+            const last7Days = [];
+            const salesData = [];
+            const validOrders = orders.filter(order => order.status !== 'ยกเลิก');
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                last7Days.push(date.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit' }));
+                
+                // Calculate sales for this specific date from saved orders
+                const daySales = validOrders
+                    .filter(order => order.date === dateStr)
+                    .reduce((sum, order) => sum + (parseFloat(order.totalAmount) || 0), 0);
+                salesData.push(daySales);
+            }
+            
+            window.dailySalesChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: last7Days,
+                    datasets: [{
+                        label: 'ยอดขาย (฿)',
+                        data: salesData,
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: 'rgb(59, 130, 246)',
+                        pointBorderColor: 'rgb(255, 255, 255)',
+                        pointBorderWidth: 2,
+                        pointRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString() + '฿';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return 'ยอดขาย: ' + context.parsed.y.toLocaleString() + '฿';
+                                }
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateShippingChart() {
+            const ctx = document.getElementById('shippingChart').getContext('2d');
+            
+            // Clear previous chart
+            if (window.shippingChartInstance) {
+                window.shippingChartInstance.destroy();
+            }
+            
+            // Count shipping methods from saved orders
+            const shippingData = {};
+            const validOrders = orders.filter(order => order.status !== 'ยกเลิก');
+            
+            validOrders.forEach(order => {
+                const method = order.shippingMethod || 'ไม่ระบุ';
+                shippingData[method] = (shippingData[method] || 0) + 1;
+            });
+            
+            // If no data, show placeholder
+            if (Object.keys(shippingData).length === 0) {
+                shippingData['ไม่มีข้อมูล'] = 1;
+            }
+            
+            window.shippingChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(shippingData),
+                    datasets: [{
+                        data: Object.values(shippingData),
+                        backgroundColor: [
+                            'rgb(59, 130, 246)',   // Blue for 7-11
+                            'rgb(16, 185, 129)',   // Green for Family Mart
+                            'rgb(245, 158, 11)',   // Yellow for แมวดำ
+                            'rgb(239, 68, 68)',    // Red for นัดรับ
+                            'rgb(156, 163, 175)'   // Gray for others
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.parsed * 100) / total).toFixed(1);
+                                    return context.label + ': ' + context.parsed + ' ออเดอร์ (' + percentage + '%)';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateTopProducts() {
+            const productSales = {};
+            const validOrders = orders.filter(order => order.status !== 'ยกเลิก');
+            
+            // Parse products from saved order items
+            validOrders.forEach(order => {
+                if (!order.items) return;
+                
+                // Create temporary div to parse HTML content
+                const itemsDiv = document.createElement('div');
+                itemsDiv.innerHTML = order.items;
+                const items = itemsDiv.querySelectorAll('div');
+                
+                items.forEach(item => {
+                    const text = item.textContent.trim();
+                    if (!text) return;
+                    
+                    // Try to match different patterns:
+                    // Pattern 1: "ข้าวคั่ว 1 × 35฿"
+                    // Pattern 2: "น้ำยาป่าสำเร็ต 2*100 × 200฿"
+                    const match = text.match(/^(.+?)\s+(.+?)\s*×\s*(\d+)฿$/);
+                    if (match) {
+                        const [, name, quantity, price] = match;
+                        const productName = name.trim();
+                        
+                        if (!productSales[productName]) {
+                            productSales[productName] = { quantity: 0, sales: 0, orders: 0 };
+                        }
+                        
+                        // Parse quantity (handle formats like "2*100" or just "1")
+                        let qty = 1;
+                        const quantityStr = quantity.trim();
+                        if (quantityStr.includes('*')) {
+                            const parts = quantityStr.split('*');
+                            qty = parseInt(parts[0]) || 1;
+                        } else {
+                            qty = parseInt(quantityStr) || 1;
+                        }
+                        
+                        productSales[productName].quantity += qty;
+                        productSales[productName].sales += parseInt(price) || 0;
+                        productSales[productName].orders += 1;
+                    }
+                });
+            });
+            
+            // Sort by sales amount (descending) and take top 10
+            const sortedProducts = Object.entries(productSales)
+                .sort((a, b) => b[1].sales - a[1].sales)
+                .slice(0, 10);
+            
+            const topProductsList = document.getElementById('topProductsList');
+            topProductsList.innerHTML = '';
+            
+            if (sortedProducts.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                        ยังไม่มีข้อมูลสินค้า<br>
+                        <small>กรุณาบันทึกออเดอร์เพื่อดูสินค้าขายดี</small>
+                    </td>
+                `;
+                topProductsList.appendChild(row);
+                return;
+            }
+            
+            sortedProducts.forEach(([name, data], index) => {
+                const row = document.createElement('tr');
+                const rankColor = index < 3 ? 'text-yellow-600 font-bold' : 'text-gray-600';
+                const rankIcon = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '';
+                
+                row.innerHTML = `
+                    <td class="px-4 py-2 border-b text-sm ${rankColor}">
+                        ${rankIcon} ${index + 1}
+                    </td>
+                    <td class="px-4 py-2 border-b text-sm font-medium">${name}</td>
+                    <td class="px-4 py-2 border-b text-sm text-center">
+                        ${data.quantity} ชิ้น<br>
+                        <small class="text-gray-500">(${data.orders} ออเดอร์)</small>
+                    </td>
+                    <td class="px-4 py-2 border-b text-sm font-bold text-green-600">
+                        ${data.sales.toLocaleString()}฿
+                    </td>
+                `;
+                topProductsList.appendChild(row);
+            });
+        }
+
+        // Commission Functions
+        function calculateCommission() {
+            const startDate = document.getElementById('commissionStartDate').value;
+            const endDate = document.getElementById('commissionEndDate').value;
+            const adminFilter = document.getElementById('commissionAdminFilter').value;
+            
+            if (!startDate || !endDate) {
+                Swal.fire('ข้อผิดพลาด', 'กรุณาเลือกช่วงวันที่', 'error');
+                return;
+            }
+            
+            const commissionData = {};
+            
+            // Initialize admin data (filter by selected admin if specified)
+            const filteredAdmins = adminFilter ? admins.filter(admin => admin.name === adminFilter) : admins;
+            
+            filteredAdmins.forEach(admin => {
+                commissionData[admin.name] = {
+                    orderCount: 0,
+                    totalSales: 0,
+                    totalShipping: 0,
+                    netSales: 0,
+                    commissionRate: admin.commission,
+                    commission: 0,
+                    orders: [] // Store individual orders for details
+                };
+            });
+            
+            // Calculate commission for each admin
+            orders
+                .filter(order => 
+                    order.date >= startDate && 
+                    order.date <= endDate && 
+                    order.status !== 'ยกเลิก' &&
+                    commissionData[order.admin] &&
+                    (!adminFilter || order.admin === adminFilter)
+                )
+                .forEach(order => {
+                    const adminData = commissionData[order.admin];
+                    adminData.orderCount++;
+                    adminData.totalSales += order.totalAmount;
+                    adminData.totalShipping += order.shippingFee;
+                    adminData.netSales = adminData.totalSales - adminData.totalShipping;
+                    adminData.commission = (adminData.netSales * adminData.commissionRate) / 100;
+                    adminData.orders.push(order); // Store order for details
+                });
+            
+            // Display commission data
+            const commissionList = document.getElementById('commissionList');
+            commissionList.innerHTML = '';
+            
+            Object.entries(commissionData).forEach(([adminName, data]) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 py-2 border-b text-sm font-medium">${adminName}</td>
+                    <td class="px-4 py-2 border-b text-sm">${data.orderCount}</td>
+                    <td class="px-4 py-2 border-b text-sm">${data.totalSales.toLocaleString()}฿</td>
+                    <td class="px-4 py-2 border-b text-sm">${data.totalShipping.toLocaleString()}฿</td>
+                    <td class="px-4 py-2 border-b text-sm font-medium">${data.netSales.toLocaleString()}฿</td>
+                    <td class="px-4 py-2 border-b text-sm">${data.commissionRate}%</td>
+                    <td class="px-4 py-2 border-b text-sm font-bold text-green-600">${data.commission.toLocaleString()}฿</td>
+                    <td class="px-4 py-2 border-b text-sm">
+                        <button onclick="showOrderDetails('${adminName}', '${startDate}', '${endDate}')" 
+                                class="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs">
+                            ดูรายละเอียด
+                        </button>
+                    </td>
+                `;
+                commissionList.appendChild(row);
+            });
+        }
+
+        function showOrderDetails(adminName, startDate, endDate) {
+            // Filter orders for this admin and date range
+            const adminOrders = orders.filter(order => 
+                order.admin === adminName &&
+                order.date >= startDate && 
+                order.date <= endDate && 
+                order.status !== 'ยกเลิก'
+            );
+
+            if (adminOrders.length === 0) {
+                Swal.fire('ไม่มีข้อมูล', 'ไม่พบออเดอร์ในช่วงวันที่ที่เลือก', 'info');
+                return;
+            }
+
+            // Calculate totals
+            const totalSales = adminOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+            const totalShipping = adminOrders.reduce((sum, order) => sum + order.shippingFee, 0);
+            const netSales = totalSales - totalShipping;
+            const admin = admins.find(a => a.name === adminName);
+            const commission = admin ? (netSales * admin.commission) / 100 : 0;
+
+            // Update modal content
+            document.getElementById('modalAdminName').textContent = adminName;
+            document.getElementById('modalDateRange').textContent = `${formatThaiDate(startDate)} - ${formatThaiDate(endDate)}`;
+            document.getElementById('modalOrderCount').textContent = adminOrders.length;
+            document.getElementById('modalTotalSales').textContent = totalSales.toLocaleString() + '฿';
+            document.getElementById('modalNetSales').textContent = netSales.toLocaleString() + '฿';
+            document.getElementById('modalCommission').textContent = commission.toLocaleString() + '฿';
+
+            // Populate orders table
+            const modalOrdersList = document.getElementById('modalOrdersList');
+            modalOrdersList.innerHTML = '';
+
+            adminOrders.forEach(order => {
+                const netAmount = order.totalAmount - order.shippingFee;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-3 py-2 border-b text-xs">${order.id}</td>
+                    <td class="px-3 py-2 border-b text-xs">${formatThaiDate(order.date)}</td>
+                    <td class="px-3 py-2 border-b text-xs">${order.customerName}</td>
+                    <td class="px-3 py-2 border-b text-xs">${order.shippingMethod}</td>
+                    <td class="px-3 py-2 border-b text-xs font-medium">${order.totalAmount.toLocaleString()}฿</td>
+                    <td class="px-3 py-2 border-b text-xs">${order.shippingFee.toLocaleString()}฿</td>
+                    <td class="px-3 py-2 border-b text-xs font-bold text-green-600">${netAmount.toLocaleString()}฿</td>
+                    <td class="px-3 py-2 border-b text-xs">
+                        <span class="px-2 py-1 rounded text-xs ${getStatusColor(order.status)}">${order.status}</span>
+                    </td>
+                    <td class="px-3 py-2 border-b text-xs">
+                        <button onclick="showOrderItems('${order.id}')" 
+                                class="px-2 py-1 bg-gray-600 text-white rounded text-xs hover:bg-gray-700">
+                            ดูสินค้า
+                        </button>
+                    </td>
+                `;
+                modalOrdersList.appendChild(row);
+            });
+
+            // Show modal
+            document.getElementById('orderDetailsModal').classList.remove('hidden');
+        }
+
+        function closeOrderDetailsModal() {
+            document.getElementById('orderDetailsModal').classList.add('hidden');
+        }
+
+        function showOrderItems(orderId) {
+            const order = orders.find(o => o.id === orderId);
+            if (!order || !order.items) {
+                Swal.fire('ไม่มีข้อมูล', 'ไม่พบรายการสินค้าในออเดอร์นี้', 'info');
+                return;
+            }
+
+            // Create temporary div to parse HTML content
+            const itemsDiv = document.createElement('div');
+            itemsDiv.innerHTML = order.items;
+            const items = itemsDiv.querySelectorAll('div');
+            
+            let itemsText = `<strong>รายการสินค้าในออเดอร์ ${orderId}:</strong><br><br>`;
+            items.forEach(item => {
+                const text = item.textContent.trim();
+                if (text) {
+                    itemsText += `• ${text}<br>`;
+                }
+            });
+
+            Swal.fire({
+                title: 'รายการสินค้า',
+                html: itemsText,
+                icon: 'info',
+                confirmButtonText: 'ปิด',
+                width: '500px'
+            });
+        }
+
+        function formatThaiDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('th-TH', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            });
+        }
+
+        // Product Management Functions
+        function generateProductId() {
+            const id = 'PRD' + Math.random().toString(36).substr(2, 6).toUpperCase();
+            document.getElementById('productId').value = id;
+        }
+
+        function saveProduct() {
+            const productId = document.getElementById('productId').value;
+            const productName = document.getElementById('productName').value;
+            const productWeight = parseFloat(document.getElementById('productWeight').value) || 0;
+            const productCost = parseFloat(document.getElementById('productCost').value) || 0;
+            const productRetailPrice = parseFloat(document.getElementById('productRetailPrice').value) || 0;
+            const productWholesalePrice = parseFloat(document.getElementById('productWholesalePrice').value) || 0;
+            const productStock = parseInt(document.getElementById('productStock').value) || 0;
+            const productBarcode = document.getElementById('productBarcode').value;
+
+            if (!productName) {
+                Swal.fire('ข้อผิดพลาด', 'กรุณากรอกชื่อสินค้า', 'error');
+                return;
+            }
+
+            const product = {
+                id: productId,
+                name: productName,
+                weight: productWeight,
+                cost: productCost,
+                retailPrice: productRetailPrice,
+                wholesalePrice: productWholesalePrice,
+                stock: productStock,
+                barcode: productBarcode,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            if (currentEditingProduct !== null) {
+                products[currentEditingProduct] = { ...products[currentEditingProduct], ...product, updatedAt: new Date().toISOString() };
+                currentEditingProduct = null;
+            } else {
+                // Check if product name already exists
+                const existingProduct = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
+                if (existingProduct) {
+                    Swal.fire('ข้อผิดพลาด', 'มีสินค้าชื่อนี้อยู่แล้ว', 'error');
+                    return;
+                }
+                products.push(product);
+            }
+
+            localStorage.setItem('products', JSON.stringify(products));
+            loadProducts();
+            updateProductSummary();
+            clearProductForm();
+            
+            Swal.fire('สำเร็จ', 'บันทึกข้อมูลสินค้าเรียบร้อยแล้ว', 'success');
+        }
+
+        function editProduct(index) {
+            const product = products[index];
+            document.getElementById('productId').value = product.id;
+            document.getElementById('productName').value = product.name;
+            document.getElementById('productWeight').value = product.weight;
+            document.getElementById('productCost').value = product.cost;
+            document.getElementById('productRetailPrice').value = product.retailPrice;
+            document.getElementById('productWholesalePrice').value = product.wholesalePrice;
+            document.getElementById('productStock').value = product.stock;
+            document.getElementById('productBarcode').value = product.barcode;
+            currentEditingProduct = index;
+        }
+
+        function deleteProduct(index) {
+            Swal.fire({
+                title: 'ยืนยันการลบ',
+                text: 'คุณต้องการลบสินค้านี้หรือไม่?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'ลบ',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    products.splice(index, 1);
+                    localStorage.setItem('products', JSON.stringify(products));
+                    loadProducts();
+                    updateProductSummary();
+                    Swal.fire('ลบแล้ว', 'ลบสินค้าเรียบร้อยแล้ว', 'success');
+                }
+            });
+        }
+
+        function updateStock(index) {
+            const product = products[index];
+            Swal.fire({
+                title: 'แก้ไขจำนวนคงเหลือ',
+                html: `
+                    <div class="text-left">
+                        <p class="mb-4"><strong>สินค้า:</strong> ${product.name}</p>
+                        <p class="mb-4"><strong>คงเหลือปัจจุบัน:</strong> ${product.stock} ชิ้น</p>
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">จำนวนใหม่</label>
+                            <input type="number" id="newStock" class="w-full px-3 py-2 border border-gray-300 rounded-lg" value="${product.stock}" min="0">
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'บันทึก',
+                cancelButtonText: 'ยกเลิก',
+                preConfirm: () => {
+                    const newStock = parseInt(document.getElementById('newStock').value);
+                    if (isNaN(newStock) || newStock < 0) {
+                        Swal.showValidationMessage('กรุณากรอกจำนวนที่ถูกต้อง');
+                        return false;
+                    }
+                    return newStock;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    products[index].stock = result.value;
+                    products[index].updatedAt = new Date().toISOString();
+                    localStorage.setItem('products', JSON.stringify(products));
+                    loadProducts();
+                    updateProductSummary();
+                    Swal.fire('สำเร็จ', 'อัพเดตจำนวนคงเหลือเรียบร้อยแล้ว', 'success');
+                }
+            });
+        }
+
+        function clearProductForm() {
+            document.getElementById('productName').value = '';
+            document.getElementById('productWeight').value = '';
+            document.getElementById('productCost').value = '';
+            document.getElementById('productRetailPrice').value = '';
+            document.getElementById('productWholesalePrice').value = '';
+            document.getElementById('productStock').value = '';
+            document.getElementById('productBarcode').value = '';
+            generateProductId();
+            currentEditingProduct = null;
+        }
+
+        function loadProducts() {
+            const productsList = document.getElementById('productsList');
+            productsList.innerHTML = '';
+
+            const filteredProducts = getFilteredProducts();
+
+            if (filteredProducts.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td colspan="9" class="px-4 py-8 text-center text-gray-500">
+                        ไม่พบสินค้าที่ตรงกับเงื่อนไข
+                    </td>
+                `;
+                productsList.appendChild(row);
+                return;
+            }
+
+            filteredProducts.forEach((product, originalIndex) => {
+                const actualIndex = products.findIndex(p => p.id === product.id);
+                const row = document.createElement('tr');
+                const stockClass = product.stock <= 0 ? 'text-red-600 font-bold' : 
+                                 product.stock <= 10 ? 'text-yellow-600 font-bold' : 'text-green-600';
+                
+                row.innerHTML = `
+                    <td class="px-3 py-2 border-b text-xs">${product.id}</td>
+                    <td class="px-3 py-2 border-b text-xs font-medium">${product.name}</td>
+                    <td class="px-3 py-2 border-b text-xs">${product.weight}g</td>
+                    <td class="px-3 py-2 border-b text-xs">${product.cost.toLocaleString()}฿</td>
+                    <td class="px-3 py-2 border-b text-xs">${product.retailPrice.toLocaleString()}฿</td>
+                    <td class="px-3 py-2 border-b text-xs">${product.wholesalePrice.toLocaleString()}฿</td>
+                    <td class="px-3 py-2 border-b text-xs ${stockClass}">${product.stock}</td>
+                    <td class="px-3 py-2 border-b text-xs">${product.barcode || '-'}</td>
+                    <td class="px-3 py-2 border-b">
+                        <div class="flex flex-wrap gap-1">
+                            <button onclick="editProduct(${actualIndex})" class="px-2 py-1 bg-blue-500 text-white rounded text-xs">แก้ไข</button>
+                            <button onclick="updateStock(${actualIndex})" class="px-2 py-1 bg-green-500 text-white rounded text-xs">สต็อก</button>
+                            <button onclick="deleteProduct(${actualIndex})" class="px-2 py-1 bg-red-500 text-white rounded text-xs">ลบ</button>
+                        </div>
+                    </td>
+                `;
+                productsList.appendChild(row);
+            });
+        }
+
+        function getFilteredProducts() {
+            let filtered = [...products];
+            
+            // Search filter
+            const searchTerm = document.getElementById('productSearch').value.toLowerCase();
+            if (searchTerm) {
+                filtered = filtered.filter(product => 
+                    product.name.toLowerCase().includes(searchTerm) ||
+                    product.id.toLowerCase().includes(searchTerm) ||
+                    product.barcode.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            // Stock filter
+            const stockFilter = document.getElementById('stockFilter').value;
+            if (stockFilter) {
+                switch(stockFilter) {
+                    case 'instock':
+                        filtered = filtered.filter(product => product.stock > 10);
+                        break;
+                    case 'lowstock':
+                        filtered = filtered.filter(product => product.stock > 0 && product.stock <= 10);
+                        break;
+                    case 'outofstock':
+                        filtered = filtered.filter(product => product.stock <= 0);
+                        break;
+                }
+            }
+            
+            return filtered;
+        }
+
+        function searchProducts() {
+            loadProducts();
+        }
+
+        function filterProducts() {
+            loadProducts();
+        }
+
+        function updateProductSummary() {
+            const totalProducts = products.length;
+            const lowStockProducts = products.filter(p => p.stock > 0 && p.stock <= 10).length;
+            const totalStockValue = products.reduce((sum, product) => sum + (product.cost * product.stock), 0);
+            
+            document.getElementById('totalProducts').textContent = totalProducts;
+            document.getElementById('totalProducts2').textContent = totalProducts;
+            document.getElementById('lowStockProducts').textContent = lowStockProducts;
+            document.getElementById('totalStockValue').textContent = totalStockValue.toLocaleString() + '฿';
+        }
+
+        function importProductsFromOrders() {
+            if (orders.length === 0) {
+                Swal.fire('ไม่มีข้อมูล', 'ไม่พบออเดอร์ในระบบ', 'info');
+                return;
+            }
+
+            Swal.fire({
+                title: 'ดึงข้อมูลจากออเดอร์',
+                text: 'กำลังประมวลผลรายการสินค้าจากออเดอร์...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Extract unique products from all orders
+            const productNames = new Set();
+            const newProducts = [];
+            let addedCount = 0;
+            let existingCount = 0;
+
+            orders.forEach(order => {
+                if (!order.items) return;
+                
+                // Parse items from HTML
+                const itemsDiv = document.createElement('div');
+                itemsDiv.innerHTML = order.items;
+                const items = itemsDiv.querySelectorAll('div');
+                
+                items.forEach(item => {
+                    const text = item.textContent.trim();
+                    if (!text) return;
+                    
+                    // Parse product name from different formats
+                    const match = text.match(/^(.+?)\s+(.+?)\s*×\s*(\d+)฿$/);
+                    if (match) {
+                        const [, name, quantity, price] = match;
+                        const productName = name.trim();
+                        
+                        if (!productNames.has(productName.toLowerCase())) {
+                            productNames.add(productName.toLowerCase());
+                            
+                            // Check if product already exists in our products array
+                            const existingProduct = products.find(p => p.name.toLowerCase() === productName.toLowerCase());
+                            
+                            if (!existingProduct) {
+                                // Create new product with estimated data
+                                const estimatedPrice = parseInt(price) || 0;
+                                const newProduct = {
+                                    id: 'PRD' + Math.random().toString(36).substr(2, 6).toUpperCase(),
+                                    name: productName,
+                                    weight: 0, // Unknown, user can update later
+                                    cost: Math.round(estimatedPrice * 0.7), // Estimate 70% of selling price as cost
+                                    retailPrice: estimatedPrice,
+                                    wholesalePrice: Math.round(estimatedPrice * 0.9), // Estimate 90% as wholesale
+                                    stock: 0, // Unknown stock, user needs to update
+                                    barcode: '',
+                                    createdAt: new Date().toISOString(),
+                                    updatedAt: new Date().toISOString()
+                                };
+                                
+                                newProducts.push(newProduct);
+                                addedCount++;
+                            } else {
+                                existingCount++;
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Add new products to the array
+            products.push(...newProducts);
+            localStorage.setItem('products', JSON.stringify(products));
+            
+            // Update UI
+            loadProducts();
+            updateProductSummary();
+
+            // Show results
+            setTimeout(() => {
+                Swal.fire({
+                    title: 'ดึงข้อมูลเสร็จสิ้น',
+                    html: `
+                        <div class="text-left">
+                            <p class="mb-2">✅ <strong>เพิ่มสินค้าใหม่:</strong> ${addedCount} รายการ</p>
+                            <p class="mb-2">ℹ️ <strong>สินค้าที่มีอยู่แล้ว:</strong> ${existingCount} รายการ</p>
+                            <hr class="my-3">
+                            <p class="text-sm text-gray-600">
+                                <strong>หมายเหตุ:</strong> สินค้าที่เพิ่มใหม่จะมีข้อมูลเบื้องต้น กรุณาตรวจสอบและแก้ไข:
+                            </p>
+                            <ul class="text-sm text-gray-600 mt-2 ml-4">
+                                <li>• น้ำหนักสินค้า</li>
+                                <li>• ราคาต้นทุนที่แท้จริง</li>
+                                <li>• จำนวนคงเหลือ</li>
+                                <li>• เลขบาร์โค้ด</li>
+                            </ul>
+                        </div>
+                    `,
+                    icon: 'success',
+                    confirmButtonText: 'เข้าใจแล้ว'
+                });
+            }, 1000);
+        }
+
+        // Google Sheets Integration
+        async function saveToGoogleSheet(type) {
+            if (type === 'admin') {
+                await saveAdminsToGoogleSheet();
+            } else if (type === 'orders') {
+                await saveOrdersToGoogleSheet();
+            }
+        }
+
+        async function saveAdminsToGoogleSheet() {
+            Swal.fire({
+                title: 'กำลังบันทึกข้อมูลแอดมิน...',
+                html: `
+                    <div class="text-center">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p>กำลังส่งข้อมูล ${admins.length} แอดมินไปยัง Google Sheets</p>
+                        <p class="text-sm text-gray-500 mt-2">กรุณารอสักครู่...</p>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                showConfirmButton: false
+            });
+
+            try {
+                const data = { 
+                    action: 'save',
+                    type: 'admin', 
+                    data: admins,
+                    timestamp: new Date().toISOString()
+                };
+                const response = await sendToGoogleSheetJSONP(data);
+                
+                if (response.status === 'success') {
+                    Swal.fire({
+                        title: 'บันทึกสำเร็จ! 🎉',
+                        html: `
+                            <div class="text-center">
+                                <div class="text-green-600 text-6xl mb-4">✅</div>
+                                <p class="text-lg font-semibold mb-2">บันทึกข้อมูลแอดมินเรียบร้อยแล้ว</p>
+                                <p class="text-gray-600">จำนวน ${admins.length} รายการ</p>
+                                <p class="text-sm text-gray-500 mt-2">เวลา: ${new Date().toLocaleString('th-TH')}</p>
+                            </div>
+                        `,
+                        icon: 'success',
+                        confirmButtonText: 'ปิด',
+                        timer: 3000
+                    });
+                } else {
+                    throw new Error(response.message || 'Unknown error');
+                }
+            } catch (error) {
+                Swal.fire({
+                    title: 'เกิดข้อผิดพลาด',
+                    html: `
+                        <div class="text-center">
+                            <div class="text-red-600 text-6xl mb-4">❌</div>
+                            <p class="text-lg font-semibold mb-2">ไม่สามารถบันทึกข้อมูลแอดมินได้</p>
+                            <p class="text-gray-600">${error.message}</p>
+                            <p class="text-sm text-gray-500 mt-2">กรุณาลองใหม่อีกครั้ง</p>
+                        </div>
+                    `,
+                    icon: 'error',
+                    confirmButtonText: 'ปิด'
+                });
+            }
+        }
+
+        async function saveOrdersToGoogleSheet() {
+            if (orders.length === 0) {
+                Swal.fire('ไม่มีข้อมูล', 'ไม่พบออเดอร์ในระบบ', 'info');
+                return;
+            }
+
+            Swal.fire({
+                title: 'กำลังบันทึกออเดอร์ทั้งหมด...',
+                html: `
+                    <div class="text-center">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p class="mb-4">กำลังส่งข้อมูล ${orders.length} ออเดอร์</p>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div id="progressBar" class="bg-blue-600 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <p id="progressText" class="mt-2 text-sm text-gray-600">0 / ${orders.length}</p>
+                        <p class="text-xs text-gray-500 mt-2">กรุณาอย่าปิดหน้าต่างนี้</p>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                showConfirmButton: false
+            });
+
+            let successCount = 0;
+            let errorCount = 0;
+            const errorOrders = [];
+
+            // Process orders in batches of 5 to avoid overwhelming the server
+            const batchSize = 5;
+            for (let i = 0; i < orders.length; i += batchSize) {
+                const batch = orders.slice(i, i + batchSize);
+                const batchPromises = batch.map(async (order, batchIndex) => {
+                    const globalIndex = i + batchIndex;
+                    try {
+                        // Update progress
+                        const progress = ((globalIndex + 1) / orders.length) * 100;
+                        document.getElementById('progressBar').style.width = progress + '%';
+                        document.getElementById('progressText').textContent = `${globalIndex + 1} / ${orders.length}`;
+                        
+                        // Mark as syncing
+                        updateSyncStatus(order.id, 'syncing');
+                        
+                        // Send to Google Sheets
+                        await saveOrderToGoogleSheet(order);
+                        
+                        // Mark as success
+                        updateSyncStatus(order.id, 'success', 'บันทึกสำเร็จ');
+                        successCount++;
+                        
+                    } catch (error) {
+                        // Mark as error
+                        updateSyncStatus(order.id, 'error', error.message);
+                        errorCount++;
+                        errorOrders.push({ order: order.id, error: error.message });
+                    }
+                });
+
+                // Wait for current batch to complete
+                await Promise.all(batchPromises);
+                
+                // Small delay between batches
+                if (i + batchSize < orders.length) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+            }
+
+            // Show final results
+            if (errorCount === 0) {
+                Swal.fire({
+                    title: 'บันทึกสำเร็จ! 🎉',
+                    html: `
+                        <div class="text-center">
+                            <div class="text-green-600 text-6xl mb-4">✅</div>
+                            <p class="text-lg font-bold text-green-600 mb-2">บันทึกเสร็จสิ้น</p>
+                            <p class="text-gray-600">ส่งข้อมูล ${successCount} ออเดอร์เรียบร้อยแล้ว</p>
+                            <p class="text-sm text-gray-500 mt-2">เวลา: ${new Date().toLocaleString('th-TH')}</p>
+                        </div>
+                    `,
+                    icon: 'success',
+                    confirmButtonText: 'ปิด',
+                    timer: 5000
+                });
+            } else {
+                Swal.fire({
+                    title: 'บันทึกเสร็จสิ้น',
+                    html: `
+                        <div class="text-left">
+                            <div class="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                                <p class="text-green-600 font-semibold">✅ สำเร็จ: ${successCount} ออเดอร์</p>
+                            </div>
+                            <div class="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
+                                <p class="text-red-600 font-semibold">❌ ไม่สำเร็จ: ${errorCount} ออเดอร์</p>
+                            </div>
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                <p class="text-sm text-blue-600">
+                                    💡 <strong>หมายเหตุ:</strong> ออเดอร์ที่ส่งไม่ได้จะมีปุ่ม "Re save" ให้คลิกส่งซ้ำได้
+                                </p>
+                            </div>
+                        </div>
+                    `,
+                    icon: 'warning',
+                    confirmButtonText: 'เข้าใจแล้ว'
+                });
+            }
+        }
+
+        async function saveOrderToGoogleSheet(order) {
+            const data = { 
+                action: 'save',
+                type: 'single_order', 
+                data: order,
+                timestamp: new Date().toISOString()
+            };
+            return await sendToGoogleSheetJSONP(data);
+        }
+
+        function sendToGoogleSheetJSONP(data) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                const callbackName = 'gsCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                
+                // Set up callback function
+                window[callbackName] = function(response) {
+                    // Clean up
+                    document.head.removeChild(script);
+                    delete window[callbackName];
+                    
+                    if (response && response.status === 'success') {
+                        resolve(response);
+                    } else {
+                        reject(new Error(response?.message || 'ไม่ทราบสาเหตุข้อผิดพลาด'));
+                    }
+                };
+
+                // Create URL with parameters
+                const params = new URLSearchParams({
+                    callback: callbackName,
+                    data: JSON.stringify(data)
+                });
+
+                script.src = `${GOOGLE_SCRIPT_URL}?${params}`;
+                script.onerror = function() {
+                    document.head.removeChild(script);
+                    delete window[callbackName];
+                    reject(new Error('ไม่สามารถเชื่อมต่อกับ Google Sheets ได้'));
+                };
+
+                document.head.appendChild(script);
+
+                // Timeout after 30 seconds
+                setTimeout(() => {
+                    if (window[callbackName]) {
+                        document.head.removeChild(script);
+                        delete window[callbackName];
+                        reject(new Error('หมดเวลาการเชื่อมต่อ (30 วินาที)'));
+                    }
+                }, 30000);
+            });
+        }
+
+        function loadFromGoogleSheet(type) {
+            Swal.fire({
+                title: 'กำลังโหลดข้อมูล...',
+                html: `
+                    <div class="text-center">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+                        <p>กำลังดึงข้อมูล${type === 'admin' ? 'แอดมิน' : 'ออเดอร์'}จาก Google Sheets</p>
+                        <p class="text-sm text-gray-500 mt-2">กรุณารอสักครู่...</p>
+                    </div>
+                `,
+                allowOutsideClick: false,
+                showConfirmButton: false
+            });
+
+            // JSONP request
+            const script = document.createElement('script');
+            const callbackName = 'loadCallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            window[callbackName] = function(response) {
+                // Clean up
+                document.head.removeChild(script);
+                delete window[callbackName];
+                
+                if (response && response.status === 'success') {
+                    if (type === 'admin' && response.data && response.data.admins) {
+                        const loadedAdmins = response.data.admins;
+                        admins = loadedAdmins;
+                        localStorage.setItem('admins', JSON.stringify(admins));
+                        loadAdmins();
+                        updateAdminDropdowns();
+                        updateReports();
+                        
+                        Swal.fire({
+                            title: 'โหลดสำเร็จ! 🎉',
+                            html: `
+                                <div class="text-center">
+                                    <div class="text-green-600 text-6xl mb-4">📥</div>
+                                    <p class="text-lg font-semibold mb-2">โหลดข้อมูลแอดมินเรียบร้อยแล้ว</p>
+                                    <p class="text-gray-600">จำนวน ${loadedAdmins.length} รายการ</p>
+                                    <p class="text-sm text-gray-500 mt-2">เวลา: ${new Date().toLocaleString('th-TH')}</p>
+                                </div>
+                            `,
+                            icon: 'success',
+                            confirmButtonText: 'ปิด',
+                            timer: 3000
+                        });
+                    } else if (type === 'orders' && response.data && response.data.orders) {
+                        const loadedOrders = response.data.orders;
+                        orders = loadedOrders;
+                        localStorage.setItem('orders', JSON.stringify(orders));
+                        loadOrders();
+                        updateTrackingDropdown();
+                        updateManageOrders();
+                        updateReports();
+                        calculateCommission();
+                        
+                        Swal.fire({
+                            title: 'โหลดสำเร็จ! 🎉',
+                            html: `
+                                <div class="text-center">
+                                    <div class="text-green-600 text-6xl mb-4">📥</div>
+                                    <p class="text-lg font-semibold mb-2">โหลดข้อมูลออเดอร์เรียบร้อยแล้ว</p>
+                                    <p class="text-gray-600">จำนวน ${loadedOrders.length} รายการ</p>
+                                    <p class="text-sm text-gray-500 mt-2">เวลา: ${new Date().toLocaleString('th-TH')}</p>
+                                </div>
+                            `,
+                            icon: 'success',
+                            confirmButtonText: 'ปิด',
+                            timer: 3000
+                        });
+                    } else {
+                        Swal.fire('ไม่มีข้อมูล', 'ไม่พบข้อมูลใน Google Sheets หรือรูปแบบข้อมูลไม่ถูกต้อง', 'info');
+                    }
+                } else {
+                    Swal.fire({
+                        title: 'เกิดข้อผิดพลาด',
+                        html: `
+                            <div class="text-center">
+                                <div class="text-red-600 text-6xl mb-4">❌</div>
+                                <p class="text-lg font-semibold mb-2">ไม่สามารถโหลดข้อมูลได้</p>
+                                <p class="text-gray-600">${response?.message || 'ไม่ทราบสาเหตุข้อผิดพลาด'}</p>
+                                <p class="text-sm text-gray-500 mt-2">กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่</p>
+                            </div>
+                        `,
+                        icon: 'error',
+                        confirmButtonText: 'ปิด'
+                    });
+                }
+            };
+
+            const params = new URLSearchParams({
+                callback: callbackName,
+                action: 'load',
+                type: type
+            });
+
+            script.src = `${GOOGLE_SCRIPT_URL}?${params}`;
+            script.onerror = function() {
+                document.head.removeChild(script);
+                delete window[callbackName];
+                Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อกับ Google Sheets ได้', 'error');
+            };
+
+            document.head.appendChild(script);
+
+            // Timeout after 30 seconds
+            setTimeout(() => {
+                if (window[callbackName]) {
+                    document.head.removeChild(script);
+                    delete window[callbackName];
+                    Swal.fire('ข้อผิดพลาด', 'หมดเวลาการเชื่อมต่อ (30 วินาที)', 'error');
+                }
+            }, 30000);
+        }
+
+        // Open Google Sheets in new tab
+        function openGoogleSheets() {
+            const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/1f9vkLUzr9DKJuVQOfWVTVDypjH2Z-3sevcTPSktAV0U/edit?usp=sharing';
+            window.open(GOOGLE_SHEETS_URL, '_blank');
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'969eaf7526602721',t:'MTc1NDMxNzEyMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
